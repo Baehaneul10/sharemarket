@@ -33,6 +33,7 @@ export default async function AdminStoresPage(props: {
 
         <form action={createStoreAction} className="mt-4 grid grid-cols-1 gap-3 rounded-2xl border border-gray-200 bg-white p-4 sm:grid-cols-2">
           <Field label="매장명 *"><input name="name" required className={input} /></Field>
+          <Field label="URL 주소(slug) *"><input name="slug" required placeholder="pangyo (영문/숫자, 매장마다 고유)" className={input} /></Field>
           <Field label="브랜드"><input name="brand" defaultValue="영영상점" className={input} /></Field>
           <Field label="점주명"><input name="owner_name" className={input} /></Field>
           <Field label="연락처"><input name="phone" className={input} /></Field>
@@ -60,10 +61,18 @@ export default async function AdminStoresPage(props: {
                 {s.auth_user_id ? " · 🔑계정 연결됨" : " · 계정 미연결"}
               </p>
               <div className="mt-2 flex items-center gap-2">
-                <code className="flex-1 truncate rounded bg-gray-50 px-2 py-1 text-xs text-gray-600">
-                  {siteUrl || "(배포주소)"}/?store={s.id}
-                </code>
-                <CopyButton text={`${siteUrl}/?store=${s.id}`} label="지점 링크 복사" />
+                {s.slug ? (
+                  <>
+                    <code className="flex-1 truncate rounded bg-gray-50 px-2 py-1 text-xs text-gray-600">
+                      {siteUrl || "(배포주소)"}/s/{s.slug}
+                    </code>
+                    <CopyButton text={`${siteUrl}/s/${s.slug}`} label="지점 링크 복사" />
+                  </>
+                ) : (
+                  <code className="flex-1 truncate rounded bg-amber-50 px-2 py-1 text-xs text-amber-700">
+                    URL 주소(slug) 미설정 — 링크를 만들려면 slug를 등록하세요.
+                  </code>
+                )}
               </div>
               <div className="mt-2 flex items-center justify-between">
                 <p className="text-xs text-gray-400">↑ 이 링크를 이 지점 오픈채팅방에 공지하세요.</p>

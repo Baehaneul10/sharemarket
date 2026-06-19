@@ -121,6 +121,23 @@ export async function getGroupBuyByProductId(productId: string): Promise<GroupBu
   }
 }
 
+// slug(예: 'pangyo')로 활성 매장 1개 조회
+export async function getStoreBySlug(slug: string): Promise<Store | null> {
+  if (!isSupabaseConfigured) return null
+  try {
+    const supabase = await createClient()
+    const { data } = await supabase
+      .from("stores")
+      .select("*")
+      .eq("slug", slug)
+      .eq("is_active", true)
+      .maybeSingle()
+    return (data as Store) ?? null
+  } catch {
+    return null
+  }
+}
+
 export async function getActiveStores(): Promise<Store[]> {
   if (!isSupabaseConfigured) return []
   try {

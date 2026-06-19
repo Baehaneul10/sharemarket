@@ -51,6 +51,24 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
+  // /s/<slug> 진입 → slug로 매장을 찾아 쿠키에 고정 (이후 깊은 페이지 이동용, URL엔 slug 유지)
+  const slugMatch = path.match(/^\/s\/([^/]+)\/?$/)
+  if (slugMatch) {
+    const slug = decodeURIComponent(slugMatch[1])
+    const { data: st } = await supabase
+      .from("stores")
+      .select("id")
+      .eq("slug", slug)
+      .eq("is_active", true)
+      .maybeSingle()
+    if (st?.id) {
+      response.cookies.set("yy_store", st.id as string, {
+        path: "/",
+        maxAge: 60 * 60 * 24 * 180,
+      })
+    }
+  }
+
   return response
 }
 

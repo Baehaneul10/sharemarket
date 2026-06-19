@@ -14,6 +14,7 @@ export interface Store {
   id: string
   brand: string | null
   name: string
+  slug: string | null
   owner_name: string | null
   phone: string | null
   address: string | null

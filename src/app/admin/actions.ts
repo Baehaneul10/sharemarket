@@ -114,6 +114,7 @@ export async function createStoreAction(formData: FormData) {
   const db = createAdminClient()
   await db.from("stores").insert({
     name: String(formData.get("name") ?? "").trim(),
+    slug: String(formData.get("slug") ?? "").trim().toLowerCase() || null,
     brand: String(formData.get("brand") ?? "") || null,
     owner_name: String(formData.get("owner_name") ?? "") || null,
     phone: String(formData.get("phone") ?? "") || null,

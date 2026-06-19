@@ -8,6 +8,7 @@ create table if not exists stores (
   id            uuid primary key default gen_random_uuid(),
   brand         text,
   name          text not null,
+  slug          text unique,           -- 매장별 URL 주소 (예: pangyo → /s/pangyo)
   owner_name    text,
   phone         text,
   address       text,
