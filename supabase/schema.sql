@@ -36,6 +36,7 @@ create table if not exists products (
   expiry         text,
   allergy        text,
   max_per_person int default 3,
+  store_ids      uuid[] default '{}',   -- 노출 매장(비어있으면 전체 매장)
   is_visible     boolean default true,
   created_at     timestamptz default now(),
   updated_at     timestamptz default now()

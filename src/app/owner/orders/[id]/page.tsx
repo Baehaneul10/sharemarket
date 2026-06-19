@@ -30,7 +30,7 @@ export default async function OwnerOrderDetail(props: {
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? ""
   const noticeText = gb?.product
-    ? buildNoticeText({ product: gb.product, groupBuy: gb, store, orderUrl: `${siteUrl}/order/${gb.id}` })
+    ? buildNoticeText({ product: gb.product, groupBuy: gb, store, orderUrl: `${siteUrl}/?store=${store.id}` })
     : ""
 
   const active = order.status === "received" || order.status === "incoming"
@@ -39,7 +39,7 @@ export default async function OwnerOrderDetail(props: {
     <>
       <OwnerHeader storeName={store.name} />
       <main className="mx-auto w-full max-w-screen-md flex-1 px-4 py-6">
-        <Link href="/owner/orders" className="text-sm text-emerald-600">← 주문 목록</Link>
+        <Link href="/owner/orders" prefetch={false} className="text-sm text-emerald-600">← 주문 목록</Link>
 
         <div className="mt-2 flex items-center justify-between">
           <span className="text-sm text-gray-400">{order.order_no}</span>
@@ -49,6 +49,8 @@ export default async function OwnerOrderDetail(props: {
         {/* 주문 정보 */}
         <section className="mt-3 rounded-2xl border border-gray-200 bg-white p-4 text-sm">
           <Row label="고객명" value={order.customer_name} />
+          {order.email && <Row label="이메일" value={order.email} />}
+          {order.phone && <Row label="연락처" value={order.phone} />}
           <Row label="상품" value={`${order.product_name} · ${order.quantity}개`} />
           <Row label="결제 예정액" value={formatPrice(order.total_price)} />
           <Row label="픽업 예정일" value={formatDate(order.pickup_date)} />
@@ -59,11 +61,15 @@ export default async function OwnerOrderDetail(props: {
           {order.picked_up_at && <Row label="픽업 완료" value={formatDateTime(order.picked_up_at)} />}
         </section>
 
-        {/* 연락 버튼 */}
-        <div className="mt-3 grid grid-cols-2 gap-2">
-          <a href={`tel:${order.phone}`} className="rounded-xl border border-gray-300 bg-white py-3 text-center font-medium hover:bg-gray-50">📞 전화하기</a>
-          <a href={`sms:${order.phone}`} className="rounded-xl border border-gray-300 bg-white py-3 text-center font-medium hover:bg-gray-50">✉️ 문자 보내기</a>
-        </div>
+        {/* 연락 버튼 (전화번호가 있을 때만) */}
+        {order.phone ? (
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <a href={`tel:${order.phone}`} className="rounded-xl border border-gray-300 bg-white py-3 text-center font-medium hover:bg-gray-50">📞 전화하기</a>
+            <a href={`sms:${order.phone}`} className="rounded-xl border border-gray-300 bg-white py-3 text-center font-medium hover:bg-gray-50">✉️ 문자 보내기</a>
+          </div>
+        ) : order.email ? (
+          <a href={`mailto:${order.email}`} className="mt-3 block rounded-xl border border-gray-300 bg-white py-3 text-center font-medium hover:bg-gray-50">✉️ 이메일 보내기</a>
+        ) : null}
 
         {/* 상태 변경 */}
         {active && (

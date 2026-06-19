@@ -50,6 +50,7 @@ export default async function OwnerDashboard() {
 
         <Link
           href="/owner/orders"
+          prefetch={false}
           className="mt-6 block rounded-xl bg-gray-900 py-3.5 text-center font-semibold text-white hover:bg-gray-800"
         >
           주문 목록 보기

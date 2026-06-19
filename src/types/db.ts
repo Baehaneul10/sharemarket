@@ -41,6 +41,7 @@ export interface Product {
   expiry: string | null
   allergy: string | null
   max_per_person: number
+  store_ids: string[]
   is_visible: boolean
   created_at: string
   updated_at: string
@@ -69,8 +70,10 @@ export interface Order {
   product_id: string
   product_name: string
   store_id: string
+  user_id: string | null
   customer_name: string
-  phone: string
+  phone: string | null
+  email: string | null
   quantity: number
   unit_price: number
   total_price: number

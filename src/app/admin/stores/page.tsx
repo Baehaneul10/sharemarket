@@ -1,21 +1,35 @@
 import { requireAdmin } from "@/lib/auth"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { AdminHeader } from "@/components/AdminHeader"
-import { createStoreAction } from "@/app/admin/actions"
+import { CopyButton } from "@/components/CopyButton"
+import { createStoreAction, deleteStoreAction } from "@/app/admin/actions"
 import type { Store } from "@/types/db"
 
-export default async function AdminStoresPage() {
+const MESSAGES: Record<string, { text: string; tone: string }> = {
+  deleted: { text: "매장을 삭제했습니다.", tone: "border-emerald-300 bg-emerald-50 text-emerald-800" },
+  has_orders: { text: "주문 이력이 있는 매장은 삭제할 수 없습니다.", tone: "border-amber-300 bg-amber-50 text-amber-800" },
+  error: { text: "삭제 중 오류가 발생했습니다.", tone: "border-red-300 bg-red-50 text-red-700" },
+}
+
+export default async function AdminStoresPage(props: {
+  searchParams: Promise<{ msg?: string }>
+}) {
   await requireAdmin()
+  const { msg } = await props.searchParams
+  const banner = msg ? MESSAGES[msg] : null
   const db = createAdminClient()
   const { data } = await db.from("stores").select("*").order("sort_order")
   const stores = (data as Store[]) ?? []
   const input = "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? ""
 
   return (
     <>
       <AdminHeader />
       <main className="mx-auto w-full max-w-screen-lg flex-1 px-4 py-6">
         <h1 className="text-lg font-bold">매장 등록</h1>
+
+        {banner && <p className={`mt-3 rounded-xl border p-3 text-sm ${banner.tone}`}>{banner.text}</p>}
 
         <form action={createStoreAction} className="mt-4 grid grid-cols-1 gap-3 rounded-2xl border border-gray-200 bg-white p-4 sm:grid-cols-2">
           <Field label="매장명 *"><input name="name" required className={input} /></Field>
@@ -45,6 +59,21 @@ export default async function AdminStoresPage() {
                 {s.owner_name ?? "-"} · {s.phone ?? "-"} · {s.pickup_hours ?? "-"}
                 {s.auth_user_id ? " · 🔑계정 연결됨" : " · 계정 미연결"}
               </p>
+              <div className="mt-2 flex items-center gap-2">
+                <code className="flex-1 truncate rounded bg-gray-50 px-2 py-1 text-xs text-gray-600">
+                  {siteUrl || "(배포주소)"}/?store={s.id}
+                </code>
+                <CopyButton text={`${siteUrl}/?store=${s.id}`} label="지점 링크 복사" />
+              </div>
+              <div className="mt-2 flex items-center justify-between">
+                <p className="text-xs text-gray-400">↑ 이 링크를 이 지점 오픈채팅방에 공지하세요.</p>
+                <form action={deleteStoreAction}>
+                  <input type="hidden" name="id" value={s.id} />
+                  <button className="rounded-lg border border-red-300 px-3 py-1.5 text-xs text-red-600 hover:bg-red-50">
+                    매장 삭제
+                  </button>
+                </form>
+              </div>
             </div>
           ))}
         </div>

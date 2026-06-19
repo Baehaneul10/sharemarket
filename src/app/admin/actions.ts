@@ -16,7 +16,6 @@ function productPayload(formData: FormData) {
   return {
     name: String(formData.get("name") ?? "").trim(),
     category: String(formData.get("category") ?? "") || null,
-    thumbnail_url: String(formData.get("thumbnail_url") ?? "") || null,
     description: String(formData.get("description") ?? "") || null,
     composition: String(formData.get("composition") ?? "") || null,
     normal_price: num(formData.get("normal_price")),
@@ -27,14 +26,31 @@ function productPayload(formData: FormData) {
     expiry: String(formData.get("expiry") ?? "") || null,
     allergy: String(formData.get("allergy") ?? "") || null,
     max_per_person: num(formData.get("max_per_person")) ?? 3,
+    store_ids: formData.getAll("store_ids").map(String).filter(Boolean),
     is_visible: formData.get("is_visible") === "on",
   }
+}
+
+// 상품 이미지 업로드 → Supabase Storage('products' 버킷) → 공개 URL 반환
+async function uploadProductImage(formData: FormData): Promise<string | null> {
+  const f = formData.get("image")
+  if (!(f instanceof File) || f.size === 0) return null
+  const db = createAdminClient()
+  const ext = (f.name.split(".").pop() || "jpg").toLowerCase()
+  const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+  const { error } = await db.storage.from("products").upload(path, f, {
+    contentType: f.type || "image/jpeg",
+    upsert: false,
+  })
+  if (error) return null
+  return db.storage.from("products").getPublicUrl(path).data.publicUrl
 }
 
 export async function createProductAction(formData: FormData) {
   await requireAdmin()
   const db = createAdminClient()
-  await db.from("products").insert(productPayload(formData))
+  const thumbnail_url = await uploadProductImage(formData)
+  await db.from("products").insert({ ...productPayload(formData), thumbnail_url })
   revalidatePath("/admin/products")
 }
 
@@ -42,7 +58,11 @@ export async function updateProductAction(formData: FormData) {
   await requireAdmin()
   const id = String(formData.get("id"))
   const db = createAdminClient()
-  await db.from("products").update({ ...productPayload(formData), updated_at: new Date().toISOString() }).eq("id", id)
+  const uploaded = await uploadProductImage(formData)
+  const existing = String(formData.get("existing_thumbnail") ?? "") || null
+  await db.from("products")
+    .update({ ...productPayload(formData), thumbnail_url: uploaded ?? existing, updated_at: new Date().toISOString() })
+    .eq("id", id)
   revalidatePath("/admin/products")
   redirect("/admin/products")
 }
@@ -104,6 +124,22 @@ export async function createStoreAction(formData: FormData) {
     sort_order: num(formData.get("sort_order")) ?? 0,
   })
   revalidatePath("/admin/stores")
+}
+
+export async function deleteStoreAction(formData: FormData) {
+  await requireAdmin()
+  const id = String(formData.get("id"))
+  const db = createAdminClient()
+
+  // 주문이 있는 매장은 주문 기록 보호를 위해 삭제 불가
+  const { count } = await db.from("orders").select("id", { count: "exact", head: true }).eq("store_id", id)
+  if (count && count > 0) {
+    redirect("/admin/stores?msg=has_orders")
+  }
+
+  const { error } = await db.from("stores").delete().eq("id", id)
+  revalidatePath("/admin/stores")
+  redirect(error ? "/admin/stores?msg=error" : "/admin/stores?msg=deleted")
 }
 
 export async function adminLogoutAction() {

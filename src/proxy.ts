@@ -4,6 +4,16 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY, isSupabaseConfigured } from "@/lib/sup
 
 // Next.js 16: middleware → proxy. Supabase 세션 토큰을 매 요청마다 갱신한다.
 export async function proxy(request: NextRequest) {
+  // 지점 링크(?store=ID) 캡처 → 쿠키에 저장하고 깨끗한 주소로 이동
+  const storeParam = request.nextUrl.searchParams.get("store")
+  if (storeParam) {
+    const url = request.nextUrl.clone()
+    url.searchParams.delete("store")
+    const res = NextResponse.redirect(url)
+    res.cookies.set("yy_store", storeParam, { path: "/", maxAge: 60 * 60 * 24 * 180 })
+    return res
+  }
+
   let response = NextResponse.next({ request })
 
   if (!isSupabaseConfigured) return response
@@ -23,8 +33,23 @@ export async function proxy(request: NextRequest) {
     },
   })
 
-  // 세션 갱신
-  await supabase.auth.getUser()
+  // 세션 갱신 + 사용자 확인
+  const { data: { user } } = await supabase.auth.getUser()
+
+  // 고객 화면은 로그인 필수. 아래 경로는 예외(자체 로그인/콜백 보유 또는 공개).
+  const path = request.nextUrl.pathname
+  const isExempt =
+    path.startsWith("/login") ||
+    path.startsWith("/auth") ||
+    path.startsWith("/owner") ||
+    path.startsWith("/admin")
+
+  if (!user && !isExempt) {
+    const url = request.nextUrl.clone()
+    url.pathname = "/login"
+    url.search = `?next=${encodeURIComponent(path + request.nextUrl.search)}`
+    return NextResponse.redirect(url)
+  }
 
   return response
 }

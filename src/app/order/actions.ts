@@ -1,11 +1,12 @@
 "use server"
 
+import { revalidatePath } from "next/cache"
 import { createClient } from "@/lib/supabase/server"
 import { isSupabaseConfigured } from "@/lib/supabase/config"
-import { isValidPhone, phoneLast4 } from "@/lib/format"
+import { getStoreId } from "@/lib/store"
 
 export type CreateOrderResult =
-  | { ok: true; orderNo: string; last4: string }
+  | { ok: true; orderNo: string }
   | { ok: false; error: string }
 
 export async function createOrderAction(
@@ -17,28 +18,27 @@ export async function createOrderAction(
   }
 
   const groupBuyId = String(formData.get("group_buy_id") ?? "")
-  const storeId = String(formData.get("store_id") ?? "")
-  const customerName = String(formData.get("customer_name") ?? "").trim()
-  const phone = String(formData.get("phone") ?? "").trim()
   const quantity = Number(formData.get("quantity") ?? 0)
-  const requestNote = String(formData.get("request_note") ?? "").trim()
-  const privacyAgreed = formData.get("privacy_agreed") === "on"
+  const storeId = await getStoreId() // 지점은 링크(쿠키)에서 결정
 
-  if (!groupBuyId || !storeId) return { ok: false, error: "공구/매장 정보가 올바르지 않습니다." }
-  if (!customerName) return { ok: false, error: "고객명을 입력해주세요." }
-  if (!isValidPhone(phone)) return { ok: false, error: "휴대폰 번호 형식이 올바르지 않습니다." }
+  if (!storeId) return { ok: false, error: "지점 공구 링크로 다시 접속해주세요." }
+  if (!groupBuyId) return { ok: false, error: "공구 정보가 올바르지 않습니다." }
   if (!Number.isInteger(quantity) || quantity < 1) return { ok: false, error: "수량을 확인해주세요." }
-  if (!privacyAgreed) return { ok: false, error: "개인정보 수집 동의가 필요합니다." }
 
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { ok: false, error: "로그인이 필요합니다." }
+
+  const m = (user.user_metadata ?? {}) as Record<string, unknown>
+  const name = (m.name as string) || (m.full_name as string) || (m.nickname as string) || "고객"
+  const email = user.email ?? (m.email as string) ?? null
+
   const { data, error } = await supabase.rpc("create_order", {
     p_group_buy_id: groupBuyId,
     p_store_id: storeId,
-    p_customer_name: customerName,
-    p_phone: phone,
     p_quantity: quantity,
-    p_request_note: requestNote || null,
-    p_privacy_agreed: privacyAgreed,
+    p_customer_name: name,
+    p_email: email,
   })
 
   if (error) return { ok: false, error: error.message || "주문 처리 중 오류가 발생했습니다." }
@@ -46,5 +46,62 @@ export async function createOrderAction(
   const order = Array.isArray(data) ? data[0] : data
   if (!order?.order_no) return { ok: false, error: "주문 생성에 실패했습니다." }
 
-  return { ok: true, orderNo: order.order_no as string, last4: phoneLast4(phone) }
+  return { ok: true, orderNo: order.order_no as string }
+}
+
+// 공구 없이 상품을 바로 주문 (D+2 픽업)
+export async function createProductOrderAction(
+  _prev: CreateOrderResult | null,
+  formData: FormData
+): Promise<CreateOrderResult> {
+  if (!isSupabaseConfigured) {
+    return { ok: false, error: "서버가 아직 Supabase에 연결되지 않았습니다." }
+  }
+
+  const productId = String(formData.get("product_id") ?? "")
+  const quantity = Number(formData.get("quantity") ?? 0)
+  const storeId = await getStoreId()
+
+  if (!storeId) return { ok: false, error: "지점 공구 링크로 다시 접속해주세요." }
+  if (!productId) return { ok: false, error: "상품 정보가 올바르지 않습니다." }
+  if (!Number.isInteger(quantity) || quantity < 1) return { ok: false, error: "수량을 확인해주세요." }
+
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { ok: false, error: "로그인이 필요합니다." }
+
+  const m = (user.user_metadata ?? {}) as Record<string, unknown>
+  const name = (m.name as string) || (m.full_name as string) || (m.nickname as string) || "고객"
+  const email = user.email ?? (m.email as string) ?? null
+
+  const { data, error } = await supabase.rpc("create_product_order", {
+    p_product_id: productId,
+    p_store_id: storeId,
+    p_quantity: quantity,
+    p_customer_name: name,
+    p_email: email,
+  })
+
+  if (error) return { ok: false, error: error.message || "주문 처리 중 오류가 발생했습니다." }
+  const order = Array.isArray(data) ? data[0] : data
+  if (!order?.order_no) return { ok: false, error: "주문 생성에 실패했습니다." }
+  return { ok: true, orderNo: order.order_no as string }
+}
+
+// ── 마이페이지: 수량 변경 / 취소 ──────────────────────────────
+export async function updateMyOrderQtyAction(formData: FormData) {
+  const orderId = String(formData.get("order_id") ?? "")
+  const quantity = Number(formData.get("quantity") ?? 0)
+  if (!orderId || !Number.isInteger(quantity) || quantity < 1) return
+  const supabase = await createClient()
+  await supabase.rpc("update_my_order_qty", { p_order_id: orderId, p_quantity: quantity })
+  revalidatePath("/order/lookup")
+}
+
+export async function cancelMyOrderAction(formData: FormData) {
+  const orderId = String(formData.get("order_id") ?? "")
+  if (!orderId) return
+  const supabase = await createClient()
+  await supabase.rpc("cancel_my_order", { p_order_id: orderId })
+  revalidatePath("/order/lookup")
 }

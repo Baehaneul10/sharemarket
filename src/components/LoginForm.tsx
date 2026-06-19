@@ -48,7 +48,7 @@ export function LoginForm({ redirectTo, title }: { redirectTo: string; title: st
         {error && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
         <button
           type="submit" disabled={loading}
-          className="w-full rounded-xl bg-emerald-600 py-3 font-semibold text-white hover:bg-emerald-700 disabled:bg-gray-300"
+          className="w-full rounded-xl bg-blue-700 py-3 font-semibold text-white hover:bg-blue-800 disabled:bg-gray-300"
         >
           {loading ? "로그인 중..." : "로그인"}
         </button>

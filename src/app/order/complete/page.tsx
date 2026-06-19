@@ -6,23 +6,22 @@ import { formatPrice, formatDate } from "@/lib/format"
 import { COPY } from "@/lib/constants"
 import type { Order } from "@/types/db"
 
-async function fetchOrder(no: string, last4: string): Promise<Order | null> {
-  if (!isSupabaseConfigured || !no || !last4) return null
+async function fetchOrder(no: string): Promise<Order | null> {
+  if (!isSupabaseConfigured || !no) return null
   try {
     const supabase = await createClient()
-    const { data } = await supabase.rpc("lookup_order", { p_order_no: no, p_phone_last4: last4 })
-    const rows = (data as Order[]) ?? []
-    return rows[0] ?? null
+    const { data } = await supabase.from("orders").select("*").eq("order_no", no).maybeSingle()
+    return (data as Order) ?? null
   } catch {
     return null
   }
 }
 
 export default async function OrderCompletePage(props: {
-  searchParams: Promise<{ no?: string; p?: string }>
+  searchParams: Promise<{ no?: string }>
 }) {
-  const { no = "", p = "" } = await props.searchParams
-  const order = await fetchOrder(no, p)
+  const { no = "" } = await props.searchParams
+  const order = await fetchOrder(no)
 
   return (
     <main className="mx-auto w-full max-w-screen-md flex-1 px-4 py-10">
@@ -34,7 +33,7 @@ export default async function OrderCompletePage(props: {
       </div>
 
       {order && (
-        <section className="mt-4 rounded-2xl border border-gray-200 bg-white p-4 text-sm">
+        <section className="mt-4 rounded-2xl border border-sky-100 bg-white p-4 text-sm">
           <Row label="상품" value={order.product_name} />
           <Row label="수량" value={`${order.quantity}개`} />
           <Row label="결제 예정액" value={formatPrice(order.total_price)} />
@@ -48,11 +47,9 @@ export default async function OrderCompletePage(props: {
 
       <div className="mt-6 space-y-2">
         <OpenChatButton />
-        {no && (
-          <Link href={`/order/lookup?no=${no}&p=${p}`} className="block rounded-xl border border-gray-300 bg-white py-3 text-center font-medium hover:bg-gray-50">
-            주문 내역 확인하기
-          </Link>
-        )}
+        <Link href="/order/lookup" className="block rounded-xl border border-gray-300 bg-white py-3 text-center font-medium hover:bg-gray-50">
+          내 주문 내역 보기
+        </Link>
         <Link href="/" className="block rounded-xl border border-gray-300 bg-white py-3 text-center font-medium hover:bg-gray-50">
           상품 목록 다시 보기
         </Link>

@@ -42,6 +42,7 @@ export default async function OwnerOrdersPage(props: {
             return (
               <Link
                 key={f.key}
+                prefetch={false}
                 href={f.key === "all" ? "/owner/orders" : `/owner/orders?status=${f.key}`}
                 className={`whitespace-nowrap rounded-full border px-3 py-1.5 text-sm ${
                   active ? "border-gray-900 bg-gray-900 text-white" : "border-gray-300 bg-white text-gray-700"
@@ -61,6 +62,7 @@ export default async function OwnerOrdersPage(props: {
               <li key={o.id}>
                 <Link
                   href={`/owner/orders/${o.id}`}
+                  prefetch={false}
                   className="block rounded-2xl border border-gray-200 bg-white p-4 hover:border-gray-300"
                 >
                   <div className="flex items-center justify-between">

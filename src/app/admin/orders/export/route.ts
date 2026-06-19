@@ -22,7 +22,7 @@ export async function GET() {
 
   const headers = [
     "주문번호", "주문일시", "상품명", "수량", "단가", "결제예정액",
-    "고객명", "휴대폰", "픽업매장", "픽업예정일", "상태", "요청사항", "메모",
+    "고객명", "이메일", "휴대폰", "픽업매장", "픽업예정일", "상태", "요청사항", "메모",
   ]
   const rows = orders.map((o) => [
     o.order_no,
@@ -32,7 +32,8 @@ export async function GET() {
     o.unit_price,
     o.total_price,
     o.customer_name,
-    o.phone,
+    o.email ?? "",
+    o.phone ?? "",
     storeName(o.store_id),
     o.pickup_date ?? "",
     ORDER_STATUS[o.status]?.label ?? o.status,
