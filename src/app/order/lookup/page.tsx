@@ -39,6 +39,8 @@ export default async function MyOrdersPage() {
     } catch { /* 무시 */ }
   }
 
+  // 취소 건은 고객 화면에서 숨김 (기록은 DB/관리자에 남음)
+  const visible = orders.filter((o) => o.status !== "canceled")
   // 픽업 예정(접수·입고) 건 기준 합계
   const active = orders.filter((o) => o.status === "received" || o.status === "incoming")
   const totalQty = active.reduce((s, o) => s + o.quantity, 0)
@@ -60,13 +62,13 @@ export default async function MyOrdersPage() {
         </h1>
       </div>
 
-      {orders.length === 0 ? (
+      {visible.length === 0 ? (
         <p className="mt-8 rounded-xl border border-sky-100 bg-white py-12 text-center text-sm text-gray-500">
           아직 예약 내역이 없습니다.
         </p>
       ) : (
         <ul className="mt-6 space-y-3">
-          {orders.map((o) => {
+          {visible.map((o) => {
             const editable =
               (o.status === "received" || o.status === "incoming") &&
               !(o.group_buy && isClosed(o.group_buy.sale_end))
@@ -91,7 +93,7 @@ export default async function MyOrdersPage() {
         </ul>
       )}
 
-      {orders.length > 0 && (
+      {visible.length > 0 && (
         <div className="fixed inset-x-0 bottom-0 z-30 border-t border-gray-200 bg-white p-4">
           <div className="mx-auto flex max-w-screen-md items-center justify-between text-sm">
             <span className="font-semibold text-gray-700">
