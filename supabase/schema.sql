@@ -38,6 +38,8 @@ create table if not exists products (
   allergy        text,
   max_per_person int default 3,
   store_ids      uuid[] default '{}',   -- 노출 매장(비어있으면 전체 매장)
+  stock          int,                   -- 재고 수량(비우면 무제한)
+  ordered_qty    int default 0,         -- 주문 누적(남은수량 계산용)
   is_visible     boolean default true,
   created_at     timestamptz default now(),
   updated_at     timestamptz default now()

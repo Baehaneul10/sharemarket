@@ -67,6 +67,7 @@ export default async function AdminProductsPage(props: {
           <Field label="공동구매가 *"><input name="group_price" type="number" required defaultValue={editing?.group_price ?? ""} className={input} /></Field>
           <Field label="매장 공급가"><input name="supply_price" type="number" defaultValue={editing?.supply_price ?? ""} className={input} /></Field>
           <Field label="1인 최대 수량"><input name="max_per_person" type="number" defaultValue={editing?.max_per_person ?? 3} className={input} /></Field>
+          <Field label="재고 수량 (비우면 무제한)"><input name="stock" type="number" min={0} defaultValue={editing?.stock ?? ""} placeholder="예: 30" className={input} /></Field>
           <Field label="보관방식"><input name="storage" defaultValue={editing?.storage ?? ""} placeholder="실온/냉장/냉동" className={input} /></Field>
           <Field label="원산지"><input name="origin" defaultValue={editing?.origin ?? ""} className={input} /></Field>
           <Field label="유통기한"><input name="expiry" defaultValue={editing?.expiry ?? ""} className={input} /></Field>
@@ -135,7 +136,9 @@ export default async function AdminProductsPage(props: {
                     <span className="ml-1.5 rounded bg-red-100 px-1.5 py-0.5 text-xs text-red-600">공구특가</span>
                   )}
                 </p>
-                <p className="text-gray-500">{p.category ?? "-"} · {formatPrice(p.group_price)}</p>
+                <p className="text-gray-500">
+                  {p.category ?? "-"} · {formatPrice(p.group_price)} · 재고 {p.stock != null ? `${Math.max(0, p.stock - (p.ordered_qty ?? 0))}/${p.stock}` : "무제한"}
+                </p>
               </div>
               <div className="flex items-center gap-2">
                 <Link href={`/admin/products?edit=${p.id}`} prefetch={false} className="rounded-lg border border-gray-300 px-3 py-1.5">수정</Link>

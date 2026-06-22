@@ -43,6 +43,8 @@ export interface Product {
   allergy: string | null
   max_per_person: number
   store_ids: string[]
+  stock: number | null
+  ordered_qty: number
   is_visible: boolean
   created_at: string
   updated_at: string

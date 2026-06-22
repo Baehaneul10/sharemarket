@@ -26,6 +26,7 @@ function productPayload(formData: FormData) {
     expiry: String(formData.get("expiry") ?? "") || null,
     allergy: String(formData.get("allergy") ?? "") || null,
     max_per_person: num(formData.get("max_per_person")) ?? 3,
+    stock: num(formData.get("stock")),
     store_ids: formData.getAll("store_ids").map(String).filter(Boolean),
     is_visible: formData.get("is_visible") === "on",
   }

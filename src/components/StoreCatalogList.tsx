@@ -3,6 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react"
 import { useRouter } from "next/navigation"
 import { formatPrice, formatDate, remainingQty, isClosed } from "@/lib/format"
+import { createClient } from "@/lib/supabase/client"
 import { createBatchOrderAction, type BatchOrderItem } from "@/app/order/actions"
 import type { CatalogItem } from "@/lib/queries"
 
@@ -17,7 +18,8 @@ function InfoRow({ label, value }: { label: string; value: ReactNode }) {
 }
 
 // 지구스토어식: 1줄 1상품 + 수량 스테퍼 + 하단 "예약하기"로 여러 건 한 번에 예약
-// 상품 클릭 시 새 페이지가 아니라 모달(팝업)로 상세를 보여준다 (추가 서버 호출 없음).
+// - 상품 클릭 시 새 페이지가 아니라 모달(팝업)로 상세 (추가 서버 호출 없음)
+// - 남은 수량/SOLD OUT 표시 + 다른 손님이 예약하면 실시간 반영
 export function StoreCatalogList({ storeId, items }: { storeId: string; items: CatalogItem[] }) {
   const router = useRouter()
   const cartKey = `yy_cart_${storeId}`
@@ -25,6 +27,8 @@ export function StoreCatalogList({ storeId, items }: { storeId: string; items: C
   const [pending, setPending] = useState(false)
   const [err, setErr] = useState<string | null>(null)
   const [detail, setDetail] = useState<CatalogItem | null>(null)
+  // 실시간 주문 누적량 (productId → ordered_qty). 다른 손님 주문 시 갱신.
+  const [liveOrdered, setLiveOrdered] = useState<Record<string, number>>({})
 
   // 장바구니 수량을 sessionStorage에 보관 (카테고리 이동/새로고침에도 유지)
   useEffect(() => {
@@ -46,16 +50,44 @@ export function StoreCatalogList({ storeId, items }: { storeId: string; items: C
     return () => window.removeEventListener("keydown", onKey)
   }, [detail])
 
+  // 실시간: products 테이블 변경 구독 → 남은 수량 즉시 반영
+  useEffect(() => {
+    const supabase = createClient()
+    let channel: ReturnType<typeof supabase.channel> | null = null
+    const setup = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) supabase.realtime.setAuth(session.access_token)
+      channel = supabase
+        .channel(`catalog-products-${storeId}`)
+        .on("postgres_changes",
+          { event: "UPDATE", schema: "public", table: "products" },
+          (payload) => {
+            const np = payload.new as { id?: string; ordered_qty?: number }
+            if (np?.id != null) {
+              setLiveOrdered((prev) => ({ ...prev, [np.id as string]: np.ordered_qty ?? 0 }))
+            }
+          })
+        .subscribe()
+    }
+    void setup()
+    return () => { if (channel) supabase.removeChannel(channel) }
+  }, [storeId])
+
+  // 남은 수량 (공구: total_qty 기준 / 상품: stock 기준, 실시간 누적 반영). null = 무제한
+  const remainingOf = (it: CatalogItem): number | null => {
+    if (it.groupBuy) return remainingQty(it.groupBuy.total_qty, it.groupBuy.ordered_qty)
+    const ordered = liveOrdered[it.product.id] ?? it.product.ordered_qty ?? 0
+    return remainingQty(it.product.stock, ordered)
+  }
   const maxOf = (it: CatalogItem) => {
-    const max = it.product.max_per_person
-    if (!it.groupBuy) return max
-    const r = remainingQty(it.groupBuy.total_qty, it.groupBuy.ordered_qty)
-    return r !== null ? Math.min(max, r) : max
+    const r = remainingOf(it)
+    return r !== null ? Math.min(it.product.max_per_person, r) : it.product.max_per_person
   }
   const closedOf = (it: CatalogItem) => {
-    if (!it.groupBuy) return false
-    const r = remainingQty(it.groupBuy.total_qty, it.groupBuy.ordered_qty)
-    return isClosed(it.groupBuy.sale_end) || (r !== null && r <= 0)
+    const r = remainingOf(it)
+    const soldOut = r !== null && r <= 0
+    if (it.groupBuy) return isClosed(it.groupBuy.sale_end) || soldOut
+    return soldOut
   }
 
   const setItemQty = (id: string, next: number, max: number) => {
@@ -101,7 +133,8 @@ export function StoreCatalogList({ storeId, items }: { storeId: string; items: C
         {items.map((it) => {
           const p = it.product
           const gb = it.groupBuy
-          const remaining = gb ? remainingQty(gb.total_qty, gb.ordered_qty) : null
+          const remaining = remainingOf(it)
+          const soldOut = remaining !== null && remaining <= 0
           const closed = closedOf(it)
           const max = maxOf(it)
           const count = qty[p.id] ?? 0
@@ -123,7 +156,12 @@ export function StoreCatalogList({ storeId, items }: { storeId: string; items: C
                 ) : (
                   <span className="flex h-full w-full items-center justify-center text-xs text-sky-300">이미지 준비중</span>
                 )}
-                {gb && <span className="absolute left-1 top-1 rounded bg-red-500 px-1 py-0.5 text-[10px] font-bold text-white">공구특가</span>}
+                {gb && !soldOut && <span className="absolute left-1 top-1 rounded bg-red-500 px-1 py-0.5 text-[10px] font-bold text-white">공구특가</span>}
+                {soldOut && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                    <span className="text-xs font-extrabold tracking-wide text-white">SOLD OUT</span>
+                  </div>
+                )}
               </button>
 
               <div className="flex min-w-0 flex-1 flex-col">
@@ -144,15 +182,18 @@ export function StoreCatalogList({ storeId, items }: { storeId: string; items: C
 
                 {gb && (
                   <p className="mt-0.5 text-[11px] text-gray-500">
-                    {`픽업 ${formatDate(gb.pickup_date)} · 마감 ${formatDate(gb.sale_end)}${remaining !== null ? ` · 남은 ${remaining}개` : ""}`}
+                    픽업 {formatDate(gb.pickup_date)} · 마감 {formatDate(gb.sale_end)}
                   </p>
                 )}
+                {remaining !== null && !soldOut && (
+                  <p className="mt-0.5 text-[11px] font-bold text-orange-600">남은 {remaining}개</p>
+                )}
 
-                {/* 수량 스테퍼 / 마감 */}
+                {/* 수량 스테퍼 / 마감·품절 */}
                 <div className="mt-2">
                   {closed ? (
                     <span className="inline-block rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-500">
-                      {remaining !== null && remaining <= 0 ? "품절" : "마감"}
+                      {soldOut ? "품절" : "마감"}
                     </span>
                   ) : (
                     <div className="flex items-center gap-3">
@@ -210,7 +251,8 @@ export function StoreCatalogList({ storeId, items }: { storeId: string; items: C
       {detail && (() => {
         const dp = detail.product
         const dgb = detail.groupBuy
-        const dRemaining = dgb ? remainingQty(dgb.total_qty, dgb.ordered_qty) : null
+        const dRemaining = remainingOf(detail)
+        const dSoldOut = dRemaining !== null && dRemaining <= 0
         const dClosed = closedOf(detail)
         const dMax = maxOf(detail)
         const dCount = qty[dp.id] ?? 0
@@ -236,12 +278,17 @@ export function StoreCatalogList({ storeId, items }: { storeId: string; items: C
 
               {/* 스크롤 본문 */}
               <div className="flex-1 overflow-y-auto">
-                <div className="flex aspect-square items-center justify-center bg-sky-50">
+                <div className="relative flex aspect-square items-center justify-center bg-sky-50">
                   {dp.thumbnail_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={dp.thumbnail_url} alt={dp.name} className="h-full w-full object-cover" />
                   ) : (
                     <span className="text-sky-300">이미지 준비중</span>
+                  )}
+                  {dSoldOut && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                      <span className="text-xl font-extrabold tracking-wide text-white">SOLD OUT</span>
+                    </div>
                   )}
                 </div>
 
@@ -255,8 +302,10 @@ export function StoreCatalogList({ storeId, items }: { storeId: string; items: C
                   {dgb && (
                     <p className="mt-1 text-xs text-gray-500">
                       픽업 {formatDate(dgb.pickup_date)} · 마감 {formatDate(dgb.sale_end)}
-                      {dRemaining !== null ? ` · 남은 ${dRemaining}개` : ""}
                     </p>
+                  )}
+                  {dRemaining !== null && !dSoldOut && (
+                    <p className="mt-1 text-sm font-bold text-orange-600">남은 {dRemaining}개</p>
                   )}
                 </div>
 
@@ -285,7 +334,7 @@ export function StoreCatalogList({ storeId, items }: { storeId: string; items: C
               <div className="border-t border-gray-100 p-3">
                 {dClosed ? (
                   <div className="w-full rounded-xl bg-gray-200 py-3 text-center font-semibold text-gray-500">
-                    {dRemaining !== null && dRemaining <= 0 ? "품절" : "마감되었습니다"}
+                    {dSoldOut ? "품절" : "마감되었습니다"}
                   </div>
                 ) : (
                   <div className="flex items-center gap-3">
