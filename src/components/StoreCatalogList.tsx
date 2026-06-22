@@ -27,6 +27,7 @@ export function StoreCatalogList({ storeId, items }: { storeId: string; items: C
   const [pending, setPending] = useState(false)
   const [err, setErr] = useState<string | null>(null)
   const [detail, setDetail] = useState<CatalogItem | null>(null)
+  const [done, setDone] = useState(false)
   // 실시간 주문 누적량 (productId → ordered_qty). 다른 손님 주문 시 갱신.
   const [liveOrdered, setLiveOrdered] = useState<Record<string, number>>({})
 
@@ -117,7 +118,9 @@ export function StoreCatalogList({ storeId, items }: { storeId: string; items: C
     const res = await createBatchOrderAction(payload)
     if (res.ok) {
       try { sessionStorage.removeItem(cartKey) } catch { /* 무시 */ }
-      router.push(`/order/complete?nos=${res.orderNos.join(",")}`)
+      setQty({})        // 스테퍼 0으로 초기화
+      setPending(false)
+      setDone(true)     // 페이지 이동 없이 완료 알럿만 표시
     } else {
       setErr(res.error); setPending(false)
     }
@@ -357,6 +360,24 @@ export function StoreCatalogList({ storeId, items }: { storeId: string; items: C
           </div>
         )
       })()}
+
+      {/* 예약 완료 알럿 (페이지 이동 없이 가운데 팝업) */}
+      {done && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-6">
+          <div className="w-full max-w-xs rounded-2xl bg-white p-6 text-center shadow-xl">
+            <div className="text-3xl">✅</div>
+            <p className="mt-2 text-lg font-bold text-gray-900">예약이 완료되었습니다</p>
+            <p className="mt-1 text-sm text-gray-500">마이페이지에서 확인할 수 있어요.</p>
+            <button
+              type="button"
+              onClick={() => { setDone(false); router.refresh() }}
+              className="mt-5 w-full rounded-xl bg-sky-500 py-3 font-semibold text-white hover:bg-sky-600"
+            >
+              확인
+            </button>
+          </div>
+        </div>
+      )}
     </>
   )
 }
