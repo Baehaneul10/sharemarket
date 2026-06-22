@@ -4,6 +4,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/config"
 import { isClosed, formatPrice } from "@/lib/format"
 import { customerLogoutAction } from "@/app/auth/actions"
 import { MyOrderCard } from "@/components/MyOrderCard"
+import { MyOrdersRealtime } from "@/components/MyOrdersRealtime"
 import type { Order } from "@/types/db"
 
 type OrderRow = Order & {
@@ -21,6 +22,7 @@ function nickname(m: Record<string, unknown> | undefined): string {
 
 export default async function MyOrdersPage() {
   let name = "고객"
+  let userId: string | null = null
   let orders: OrderRow[] = []
 
   if (isSupabaseConfigured) {
@@ -28,6 +30,7 @@ export default async function MyOrdersPage() {
       const supabase = await createClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
+        userId = user.id
         name = nickname(user.user_metadata as Record<string, unknown>)
         const { data } = await supabase
           .from("orders")
@@ -48,6 +51,7 @@ export default async function MyOrdersPage() {
 
   return (
     <main className="mx-auto w-full max-w-screen-md flex-1 px-4 py-8 pb-28">
+      {userId && <MyOrdersRealtime userId={userId} />}
       <div className="flex items-center justify-between">
         <Link href="/" className="text-sm text-blue-700">← 홈으로</Link>
         <form action={customerLogoutAction}>
