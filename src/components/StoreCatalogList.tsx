@@ -147,17 +147,17 @@ export function StoreCatalogList({ storeId, items }: { storeId: string; items: C
               : null
 
           return (
-            <li key={p.id} className="flex gap-3 rounded-2xl border border-sky-100 bg-white p-3 shadow-sm">
+            <li key={p.id} className="flex gap-3 rounded-2xl border border-gray-100 bg-white p-3 shadow-sm">
               <button
                 type="button"
                 onClick={() => setDetail(it)}
-                className="relative h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-sky-50 text-left"
+                className="relative h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-gray-100 text-left"
               >
                 {p.thumbnail_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={p.thumbnail_url} alt={p.name} className="h-full w-full object-cover" />
                 ) : (
-                  <span className="flex h-full w-full items-center justify-center text-xs text-sky-300">이미지 준비중</span>
+                  <span className="flex h-full w-full items-center justify-center text-xs text-gray-400">이미지 준비중</span>
                 )}
                 {gb && !soldOut && <span className="absolute left-1 top-1 rounded bg-red-500 px-1 py-0.5 text-[10px] font-bold text-white">공구특가</span>}
                 {soldOut && (
@@ -168,7 +168,7 @@ export function StoreCatalogList({ storeId, items }: { storeId: string; items: C
               </button>
 
               <div className="flex min-w-0 flex-1 flex-col">
-                {p.category && <span className="w-fit rounded bg-sky-100 px-1.5 py-0.5 text-[11px] text-sky-700">{p.category}</span>}
+                {p.category && <span className="w-fit rounded bg-gray-100 px-1.5 py-0.5 text-[11px] text-gray-600">{p.category}</span>}
                 <button
                   type="button"
                   onClick={() => setDetail(it)}
@@ -180,7 +180,7 @@ export function StoreCatalogList({ storeId, items }: { storeId: string; items: C
                 <div className="mt-0.5 flex items-baseline gap-1.5">
                   {p.normal_price && <span className="text-xs text-gray-400 line-through">{formatPrice(p.normal_price)}</span>}
                   {discount !== null && discount > 0 && <span className="text-sm font-extrabold text-red-500">{discount}%</span>}
-                  <span className="text-base font-extrabold text-blue-800">{formatPrice(p.group_price)}</span>
+                  <span className="text-base font-extrabold text-blue-600">{formatPrice(p.group_price)}</span>
                 </div>
 
                 {gb && (
@@ -218,7 +218,7 @@ export function StoreCatalogList({ storeId, items }: { storeId: string; items: C
                         >+</button>
                       </div>
                       {count > 0 && (
-                        <span className="text-sm font-semibold text-blue-800">{formatPrice(p.group_price * count)}</span>
+                        <span className="text-sm font-semibold text-blue-600">{formatPrice(p.group_price * count)}</span>
                       )}
                     </div>
                   )}
@@ -242,7 +242,7 @@ export function StoreCatalogList({ storeId, items }: { storeId: string; items: C
               type="button"
               onClick={submit}
               disabled={totalQty === 0 || pending}
-              className="rounded-xl bg-sky-500 px-8 py-3.5 font-semibold text-white hover:bg-sky-600 disabled:cursor-not-allowed disabled:bg-gray-300"
+              className="rounded-xl bg-blue-600 px-8 py-3.5 font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300"
             >
               {pending ? "처리 중..." : "예약하기"}
             </button>
@@ -281,12 +281,12 @@ export function StoreCatalogList({ storeId, items }: { storeId: string; items: C
 
               {/* 스크롤 본문 */}
               <div className="flex-1 overflow-y-auto">
-                <div className="relative flex aspect-square items-center justify-center bg-sky-50">
+                <div className="relative flex aspect-square items-center justify-center bg-gray-100">
                   {dp.thumbnail_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={dp.thumbnail_url} alt={dp.name} className="h-full w-full object-cover" />
                   ) : (
-                    <span className="text-sky-300">이미지 준비중</span>
+                    <span className="text-gray-400">이미지 준비중</span>
                   )}
                   {dSoldOut && (
                     <div className="absolute inset-0 flex items-center justify-center bg-black/50">
@@ -296,11 +296,11 @@ export function StoreCatalogList({ storeId, items }: { storeId: string; items: C
                 </div>
 
                 <div className="px-4 py-3">
-                  {dp.category && <span className="rounded bg-sky-100 px-1.5 py-0.5 text-[11px] text-sky-700">{dp.category}</span>}
+                  {dp.category && <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[11px] text-gray-600">{dp.category}</span>}
                   <div className="mt-1.5 flex items-baseline gap-2">
                     {dp.normal_price && <span className="text-sm text-gray-400 line-through">{formatPrice(dp.normal_price)}</span>}
                     {dDiscount !== null && dDiscount > 0 && <span className="text-base font-extrabold text-red-500">{dDiscount}%</span>}
-                    <span className="text-xl font-extrabold text-blue-800">{formatPrice(dp.group_price)}</span>
+                    <span className="text-xl font-extrabold text-blue-600">{formatPrice(dp.group_price)}</span>
                   </div>
                   {dgb && (
                     <p className="mt-1 text-xs text-gray-500">
@@ -349,7 +349,7 @@ export function StoreCatalogList({ storeId, items }: { storeId: string; items: C
                     <button
                       type="button"
                       onClick={() => { if ((qty[dp.id] ?? 0) === 0) setItemQty(dp.id, 1, dMax); setDetail(null) }}
-                      className="flex-1 rounded-xl bg-sky-500 py-3 font-semibold text-white hover:bg-sky-600"
+                      className="flex-1 rounded-xl bg-blue-600 py-3 font-semibold text-white hover:bg-blue-700"
                     >
                       {dCount > 0 ? "담기 완료" : "담기"}
                     </button>
@@ -371,7 +371,7 @@ export function StoreCatalogList({ storeId, items }: { storeId: string; items: C
             <button
               type="button"
               onClick={() => { setDone(false); router.refresh() }}
-              className="mt-5 w-full rounded-xl bg-sky-500 py-3 font-semibold text-white hover:bg-sky-600"
+              className="mt-5 w-full rounded-xl bg-blue-600 py-3 font-semibold text-white hover:bg-blue-700"
             >
               확인
             </button>
