@@ -88,6 +88,53 @@ export async function createProductOrderAction(
   return { ok: true, orderNo: order.order_no as string }
 }
 
+// ── 메인 화면에서 여러 상품 한 번에 예약 ──────────────────────
+export type BatchOrderItem = { kind: "gb" | "product"; id: string; quantity: number }
+export type BatchOrderResult =
+  | { ok: true; orderNos: string[] }
+  | { ok: false; error: string }
+
+export async function createBatchOrderAction(items: BatchOrderItem[]): Promise<BatchOrderResult> {
+  if (!isSupabaseConfigured) {
+    return { ok: false, error: "서버가 아직 Supabase에 연결되지 않았습니다." }
+  }
+  const storeId = await getStoreId()
+  if (!storeId) return { ok: false, error: "매장 정보가 없습니다. 매장을 다시 선택해주세요." }
+
+  const valid = (items ?? []).filter(
+    (it) => it && it.id && Number.isInteger(it.quantity) && it.quantity >= 1
+  )
+  if (valid.length === 0) return { ok: false, error: "예약할 상품을 선택해주세요." }
+
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { ok: false, error: "로그인이 필요합니다." }
+
+  const m = (user.user_metadata ?? {}) as Record<string, unknown>
+  const name = (m.name as string) || (m.full_name as string) || (m.nickname as string) || "고객"
+  const email = user.email ?? (m.email as string) ?? null
+
+  const orderNos: string[] = []
+  let firstError = ""
+  for (const it of valid) {
+    const { data, error } = it.kind === "gb"
+      ? await supabase.rpc("create_order", {
+          p_group_buy_id: it.id, p_store_id: storeId, p_quantity: it.quantity,
+          p_customer_name: name, p_email: email,
+        })
+      : await supabase.rpc("create_product_order", {
+          p_product_id: it.id, p_store_id: storeId, p_quantity: it.quantity,
+          p_customer_name: name, p_email: email,
+        })
+    if (error) { if (!firstError) firstError = error.message; continue }
+    const order = Array.isArray(data) ? data[0] : data
+    if (order?.order_no) orderNos.push(order.order_no as string)
+  }
+
+  if (orderNos.length === 0) return { ok: false, error: firstError || "주문 생성에 실패했습니다." }
+  return { ok: true, orderNos }
+}
+
 // ── 마이페이지: 수량 변경 / 취소 ──────────────────────────────
 export async function updateMyOrderQtyAction(formData: FormData) {
   const orderId = String(formData.get("order_id") ?? "")

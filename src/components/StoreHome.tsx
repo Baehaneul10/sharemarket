@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { CategoryTabs } from "@/components/CategoryTabs"
-import { ProductCard } from "@/components/ProductCard"
+import { StoreCatalogList } from "@/components/StoreCatalogList"
 import { OpenChatButton } from "@/components/OpenChatButton"
 import { Countdown } from "@/components/Countdown"
 import { getCatalog } from "@/lib/queries"
@@ -41,7 +41,7 @@ export async function StoreHome({ store, cat }: { store: Store; cat?: string }) 
     .sort()[0]
 
   return (
-    <main className="mx-auto w-full max-w-screen-md flex-1 px-4 pb-16">
+    <main className="mx-auto w-full max-w-screen-md flex-1 px-4 pb-32">
       <StoreCookieSync storeId={store.id} />
       {/* 고정 상단바 */}
       <div className="sticky top-0 z-20 -mx-4 bg-blue-800 px-4 py-3 text-white shadow-sm">
@@ -82,17 +82,7 @@ export async function StoreHome({ store, cat }: { store: Store; cat?: string }) 
         <CategoryTabs active={cat} />
       </div>
 
-      {items.length === 0 ? (
-        <p className="py-16 text-center text-sm text-gray-500">
-          {cat ? `'${cat}' 카테고리에 판매 중인 상품이 없습니다.` : "판매 중인 상품이 없습니다."}
-        </p>
-      ) : (
-        <div className="grid grid-cols-2 gap-3">
-          {items.map((it) => (
-            <ProductCard key={it.product.id} item={it} />
-          ))}
-        </div>
-      )}
+      <StoreCatalogList storeId={store.id} items={items} />
 
       <section className="mt-8 rounded-2xl border border-sky-100 bg-white p-4">
         <h2 className="font-semibold text-blue-800">{store.name} 공구방</h2>
