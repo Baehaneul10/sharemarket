@@ -77,6 +77,7 @@ export default async function AdminProductsPage(props: {
         </div>
 
         <form
+          key={editing?.id ?? "new"}
           action={editing ? updateProductAction : createProductAction}
           className="mt-4 grid grid-cols-1 gap-3 rounded-2xl border border-gray-200 bg-white p-4 sm:grid-cols-2"
         >
