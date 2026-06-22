@@ -66,6 +66,32 @@ export async function noShowAction(formData: FormData) {
   revalidatePath("/owner")
 }
 
+// 여러 주문 일괄 입고완료 (오늘 픽업 체크리스트용)
+export async function bulkMarkIncomingAction(formData: FormData) {
+  const ids = formData.getAll("order_ids").map(String).filter(Boolean)
+  if (ids.length === 0) { revalidatePath("/owner/pickup"); return }
+  const { supabase } = await getUserId()
+  // RLS로 본인 매장 주문만 갱신됨. received 상태만 입고완료로.
+  await supabase.from("orders").update({ status: "incoming" }).in("id", ids).eq("status", "received")
+  revalidatePath("/owner/pickup")
+  revalidatePath("/owner/orders")
+  revalidatePath("/owner")
+}
+
+// 여러 주문 일괄 픽업완료 (현장결제 완료 가정)
+export async function bulkPickupCompleteAction(formData: FormData) {
+  const ids = formData.getAll("order_ids").map(String).filter(Boolean)
+  if (ids.length === 0) { revalidatePath("/owner/pickup"); return }
+  const { supabase, userId } = await getUserId()
+  await supabase.from("orders")
+    .update({ status: "picked_up", picked_up_at: new Date().toISOString(), handled_by: userId, paid: true })
+    .in("id", ids)
+    .in("status", ["received", "incoming"])
+  revalidatePath("/owner/pickup")
+  revalidatePath("/owner/orders")
+  revalidatePath("/owner")
+}
+
 export async function ownerLogoutAction() {
   const supabase = await createClient()
   await supabase.auth.signOut()

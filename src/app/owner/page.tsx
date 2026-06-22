@@ -51,9 +51,16 @@ export default async function OwnerDashboard() {
         </div>
 
         <Link
+          href="/owner/pickup"
+          prefetch={false}
+          className="mt-6 block rounded-xl bg-blue-600 py-3.5 text-center font-semibold text-white hover:bg-blue-700"
+        >
+          오늘 픽업 체크리스트
+        </Link>
+        <Link
           href="/owner/orders"
           prefetch={false}
-          className="mt-6 block rounded-xl bg-gray-900 py-3.5 text-center font-semibold text-white hover:bg-gray-800"
+          className="mt-2 block rounded-xl bg-gray-900 py-3.5 text-center font-semibold text-white hover:bg-gray-800"
         >
           주문 목록 보기
         </Link>

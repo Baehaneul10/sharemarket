@@ -149,3 +149,88 @@ export async function adminLogoutAction() {
   await supabase.auth.signOut()
   redirect("/admin/login")
 }
+
+// ── 엑셀(CSV) 상품 일괄 등록 ──────────────────────────────
+// 따옴표/쉼표/줄바꿈을 처리하는 간단한 CSV 파서 (외부 라이브러리 불필요)
+function parseCsv(text: string): string[][] {
+  const rows: string[][] = []
+  let row: string[] = []
+  let field = ""
+  let inQuotes = false
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i]
+    if (inQuotes) {
+      if (c === '"') {
+        if (text[i + 1] === '"') { field += '"'; i++ } else inQuotes = false
+      } else field += c
+    } else {
+      if (c === '"') inQuotes = true
+      else if (c === ",") { row.push(field); field = "" }
+      else if (c === "\n") { row.push(field); rows.push(row); row = []; field = "" }
+      else if (c === "\r") { /* 무시 */ }
+      else field += c
+    }
+  }
+  if (field.length > 0 || row.length > 0) { row.push(field); rows.push(row) }
+  return rows
+}
+
+export async function bulkCreateProductsAction(formData: FormData) {
+  await requireAdmin()
+  const file = formData.get("file")
+  if (!(file instanceof File) || file.size === 0) redirect("/admin/products?msg=bulk_empty")
+
+  let text = await (file as File).text()
+  if (text.charCodeAt(0) === 0xfeff) text = text.slice(1) // BOM 제거
+  const rows = parseCsv(text)
+  if (rows.length < 2) redirect("/admin/products?msg=bulk_empty")
+
+  const header = rows[0].map((h) => h.trim())
+  const col = (name: string) => header.indexOf(name)
+  const ci = {
+    name: col("상품명"), category: col("카테고리"), normal: col("정상가"),
+    group: col("공동구매가"), supply: col("매장공급가"), stock: col("재고"),
+    max: col("1인최대수량"), storage: col("보관방식"), origin: col("원산지"),
+    expiry: col("유통기한"), allergy: col("알레르기"), composition: col("구성"),
+    description: col("상품설명"), visible: col("노출"),
+  }
+  const get = (r: string[], i: number) => (i >= 0 ? (r[i] ?? "").trim() : "")
+  const toNum = (v: string) => { if (!v) return null; const n = Number(v.replace(/[, ]/g, "")); return Number.isNaN(n) ? null : n }
+  const toBool = (v: string) => (!v ? true : /^(y|예|true|1|o|ㅇ)$/i.test(v.trim()))
+
+  const payloads: Record<string, unknown>[] = []
+  let skipped = 0
+  for (let i = 1; i < rows.length; i++) {
+    const r = rows[i]
+    if (!r || r.every((c) => !c?.trim())) continue // 빈 줄
+    const name = get(r, ci.name)
+    const group = toNum(get(r, ci.group))
+    if (!name || group == null) { skipped++; continue } // 상품명/공동구매가 필수
+    payloads.push({
+      name,
+      category: get(r, ci.category) || null,
+      normal_price: toNum(get(r, ci.normal)),
+      group_price: group,
+      supply_price: toNum(get(r, ci.supply)),
+      stock: toNum(get(r, ci.stock)),
+      max_per_person: toNum(get(r, ci.max)) ?? 3,
+      storage: get(r, ci.storage) || null,
+      origin: get(r, ci.origin) || null,
+      expiry: get(r, ci.expiry) || null,
+      allergy: get(r, ci.allergy) || null,
+      composition: get(r, ci.composition) || null,
+      description: get(r, ci.description) || null,
+      store_ids: [],
+      is_visible: toBool(get(r, ci.visible)),
+    })
+  }
+
+  let added = 0
+  if (payloads.length > 0) {
+    const db = createAdminClient()
+    const { data } = await db.from("products").insert(payloads).select("id")
+    added = data?.length ?? 0
+  }
+  revalidatePath("/admin/products")
+  redirect(`/admin/products?added=${added}&skipped=${skipped}`)
+}

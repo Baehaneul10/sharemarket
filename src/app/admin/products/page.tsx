@@ -4,20 +4,21 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { AdminHeader } from "@/components/AdminHeader"
 import { formatPrice } from "@/lib/format"
 import { CATEGORIES } from "@/lib/constants"
-import { createProductAction, updateProductAction, deleteProductAction } from "@/app/admin/actions"
+import { createProductAction, updateProductAction, deleteProductAction, bulkCreateProductsAction } from "@/app/admin/actions"
 import type { Product, Store } from "@/types/db"
 
 const MESSAGES: Record<string, { text: string; tone: string }> = {
   deleted: { text: "상품을 삭제했습니다.", tone: "border-emerald-300 bg-emerald-50 text-emerald-800" },
   has_orders: { text: "주문 이력이 있는 상품은 삭제할 수 없습니다. 대신 '수정'에서 '고객 화면에 노출'을 꺼서 숨겨주세요.", tone: "border-amber-300 bg-amber-50 text-amber-800" },
   error: { text: "삭제 중 오류가 발생했습니다.", tone: "border-red-300 bg-red-50 text-red-700" },
+  bulk_empty: { text: "업로드할 CSV에 상품이 없습니다. 양식을 확인해주세요.", tone: "border-amber-300 bg-amber-50 text-amber-800" },
 }
 
 export default async function AdminProductsPage(props: {
-  searchParams: Promise<{ edit?: string; msg?: string }>
+  searchParams: Promise<{ edit?: string; msg?: string; added?: string; skipped?: string }>
 }) {
   await requireAdmin()
-  const { edit, msg } = await props.searchParams
+  const { edit, msg, added, skipped } = await props.searchParams
   const db = createAdminClient()
   const [{ data }, { data: gbData }, { data: storeData }] = await Promise.all([
     db.from("products").select("*").order("created_at", { ascending: false }),
@@ -45,11 +46,35 @@ export default async function AdminProductsPage(props: {
         {banner && (
           <p className={`mt-3 rounded-xl border p-3 text-sm ${banner.tone}`}>{banner.text}</p>
         )}
+        {added && (
+          <p className="mt-3 rounded-xl border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-800">
+            {added}개 상품을 일괄 등록했어요{Number(skipped) > 0 ? ` (누락 ${skipped}건: 상품명/공동구매가 빠진 줄)` : ""}.
+          </p>
+        )}
 
         <p className="mt-3 rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
           💡 <b>고객 화면에 노출</b>을 체크하면 메인에 바로 표시되고 주문(D+2 픽업)이 가능합니다.
           타임딜·한정수량 특가는 <Link href="/admin/group-buys" className="font-semibold underline">공구 회차</Link>로 진행하세요.
         </p>
+
+        {/* 엑셀(CSV) 일괄 등록 */}
+        <div className="mt-3 rounded-2xl border border-gray-200 bg-white p-4">
+          <p className="font-semibold">엑셀(CSV) 일괄 등록</p>
+          <p className="mt-1 text-xs text-gray-500">
+            양식을 받아 채운 뒤 업로드하면 여러 상품이 한 번에 등록돼요. (이미지는 등록 후 개별로 추가)
+          </p>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <a href="/admin/products/template" className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium hover:bg-gray-50">
+              양식(CSV) 다운로드
+            </a>
+            <form action={bulkCreateProductsAction} className="flex flex-wrap items-center gap-2">
+              <input type="file" name="file" accept=".csv,text/csv" required className="text-sm" />
+              <button className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700">
+                업로드 등록
+              </button>
+            </form>
+          </div>
+        </div>
 
         <form
           action={editing ? updateProductAction : createProductAction}
