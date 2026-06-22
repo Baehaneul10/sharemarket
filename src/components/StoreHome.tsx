@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/server"
 import { isSupabaseConfigured } from "@/lib/supabase/config"
 import { isClosed } from "@/lib/format"
 import { BRAND } from "@/lib/constants"
+import { StoreCookieSync } from "@/components/StoreCookieSync"
 import type { Store } from "@/types/db"
 
 function nickname(meta: Record<string, unknown> | undefined): string {
@@ -41,12 +42,20 @@ export async function StoreHome({ store, cat }: { store: Store; cat?: string }) 
 
   return (
     <main className="mx-auto w-full max-w-screen-md flex-1 px-4 pb-16">
+      <StoreCookieSync storeId={store.id} />
       {/* 고정 상단바 */}
       <div className="sticky top-0 z-20 -mx-4 bg-blue-800 px-4 py-3 text-white shadow-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-baseline gap-2">
-            <h1 className="text-lg font-extrabold">{BRAND}</h1>
-            <span className="text-xs text-sky-100">{store.name}</span>
+            {/* 로고 → 메인(홈) */}
+            <Link href="/" className="text-lg font-extrabold hover:text-sky-100">{BRAND}</Link>
+            {/* 상점명 → 매장 변경 */}
+            <Link
+              href="/stores"
+              className="text-xs text-sky-100 underline-offset-2 hover:underline"
+            >
+              {store.name} ▾
+            </Link>
           </div>
           <Link
             href="/order/lookup"
