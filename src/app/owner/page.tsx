@@ -2,6 +2,7 @@ import Link from "next/link"
 import { requireOwner } from "@/lib/auth"
 import { createClient } from "@/lib/supabase/server"
 import { OwnerHeader } from "@/components/OwnerHeader"
+import { OwnerRealtime } from "@/components/OwnerRealtime"
 import { formatPrice } from "@/lib/format"
 import { todaySeoul } from "@/lib/date"
 import type { Order } from "@/types/db"
@@ -31,6 +32,7 @@ export default async function OwnerDashboard() {
   return (
     <>
       <OwnerHeader storeName={store.name} />
+      <OwnerRealtime storeId={store.id} />
       <main className="mx-auto w-full max-w-screen-md flex-1 px-4 py-6">
         <h1 className="text-lg font-bold">오늘의 현황</h1>
 

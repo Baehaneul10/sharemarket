@@ -3,6 +3,7 @@ import { notFound } from "next/navigation"
 import { requireOwner } from "@/lib/auth"
 import { createClient } from "@/lib/supabase/server"
 import { OwnerHeader } from "@/components/OwnerHeader"
+import { OwnerRealtime } from "@/components/OwnerRealtime"
 import { StatusBadge } from "@/components/StatusBadge"
 import { CopyButton } from "@/components/CopyButton"
 import { formatPrice, formatDate, formatDateTime } from "@/lib/format"
@@ -38,6 +39,7 @@ export default async function OwnerOrderDetail(props: {
   return (
     <>
       <OwnerHeader storeName={store.name} />
+      <OwnerRealtime storeId={store.id} />
       <main className="mx-auto w-full max-w-screen-md flex-1 px-4 py-6">
         <Link href="/owner/orders" prefetch={false} className="text-sm text-emerald-600">← 주문 목록</Link>
 

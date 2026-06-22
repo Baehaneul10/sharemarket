@@ -2,6 +2,7 @@ import Link from "next/link"
 import { requireOwner } from "@/lib/auth"
 import { createClient } from "@/lib/supabase/server"
 import { OwnerHeader } from "@/components/OwnerHeader"
+import { OwnerRealtime } from "@/components/OwnerRealtime"
 import { StatusBadge } from "@/components/StatusBadge"
 import { ORDER_STATUS } from "@/lib/constants"
 import { phoneLast4, formatDate } from "@/lib/format"
@@ -33,6 +34,7 @@ export default async function OwnerOrdersPage(props: {
   return (
     <>
       <OwnerHeader storeName={store.name} />
+      <OwnerRealtime storeId={store.id} />
       <main className="mx-auto w-full max-w-screen-md flex-1 px-4 py-6">
         <h1 className="text-lg font-bold">주문 목록</h1>
 
