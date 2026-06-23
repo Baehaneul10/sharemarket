@@ -4,7 +4,7 @@
 -- ============================================================
 
 -- 1) 주문 테이블: 계정 연결(user_id) + 이메일 컬럼 추가, 전화번호는 선택값으로 변경
-alter table orders add column if not exists user_id uuid references auth.users;
+alter table orders add column if not exists user_id uuid references auth.users on delete set null;
 alter table orders add column if not exists email text;
 alter table orders alter column phone drop not null;
 create index if not exists orders_user_idx on orders(user_id);

@@ -15,7 +15,7 @@ create table if not exists stores (
   pickup_hours  text,
   is_active     boolean default true,
   openchat_url  text,
-  auth_user_id  uuid references auth.users,
+  auth_user_id  uuid references auth.users on delete set null,
   sort_order    int default 0,
   created_at    timestamptz default now()
 );
@@ -80,7 +80,7 @@ create table if not exists orders (
   status          text not null default 'received', -- received/incoming/picked_up/canceled/no_show
   pickup_date     date,
   picked_up_at    timestamptz,
-  handled_by      uuid references auth.users,
+  handled_by      uuid references auth.users on delete set null,
   paid            boolean,
   received_qty    int,
   cancel_reason   text,
