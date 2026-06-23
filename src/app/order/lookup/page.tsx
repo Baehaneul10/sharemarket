@@ -5,6 +5,7 @@ import { isClosed, formatPrice } from "@/lib/format"
 import { customerLogoutAction } from "@/app/auth/actions"
 import { MyOrderCard } from "@/components/MyOrderCard"
 import { MyOrdersRealtime } from "@/components/MyOrdersRealtime"
+import { WithdrawButton } from "@/components/WithdrawButton"
 import type { Order } from "@/types/db"
 
 type OrderRow = Order & {
@@ -95,6 +96,12 @@ export default async function MyOrdersPage() {
             )
           })}
         </ul>
+      )}
+
+      {userId && (
+        <div className="mt-10 text-center">
+          <WithdrawButton />
+        </div>
       )}
 
       {visible.length > 0 && (
