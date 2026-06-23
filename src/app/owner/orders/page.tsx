@@ -3,9 +3,8 @@ import { requireOwner } from "@/lib/auth"
 import { createClient } from "@/lib/supabase/server"
 import { OwnerHeader } from "@/components/OwnerHeader"
 import { OwnerRealtime } from "@/components/OwnerRealtime"
-import { StatusBadge } from "@/components/StatusBadge"
+import { OwnerOrdersList } from "@/components/OwnerOrdersList"
 import { ORDER_STATUS } from "@/lib/constants"
-import { phoneLast4, formatDate } from "@/lib/format"
 import type { Order, OrderStatus } from "@/types/db"
 
 const FILTERS: { key: OrderStatus | "all"; label: string }[] = [
@@ -30,6 +29,17 @@ export default async function OwnerOrdersPage(props: {
   }
   const { data } = await query
   const orders = (data as Order[]) ?? []
+  const rows = orders.map((o) => ({
+    id: o.id,
+    order_no: o.order_no,
+    status: o.status,
+    product_name: o.product_name,
+    quantity: o.quantity,
+    customer_name: o.customer_name,
+    phone: o.phone,
+    pickup_date: o.pickup_date,
+    hasNote: !!o.request_note,
+  }))
 
   return (
     <>
@@ -56,31 +66,7 @@ export default async function OwnerOrdersPage(props: {
           })}
         </div>
 
-        {orders.length === 0 ? (
-          <p className="py-16 text-center text-sm text-gray-500">주문이 없습니다.</p>
-        ) : (
-          <ul className="mt-4 space-y-2">
-            {orders.map((o) => (
-              <li key={o.id}>
-                <Link
-                  href={`/owner/orders/${o.id}`}
-                  prefetch={false}
-                  className="block rounded-2xl border border-gray-200 bg-white p-4 hover:border-gray-300"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-400">{o.order_no}</span>
-                    <StatusBadge status={o.status} />
-                  </div>
-                  <p className="mt-1 font-semibold">{o.product_name} · {o.quantity}개</p>
-                  <p className="mt-0.5 text-sm text-gray-500">
-                    {o.customer_name} ({phoneLast4(o.phone)}) · 픽업 {formatDate(o.pickup_date)}
-                    {o.request_note ? " · 📝요청사항" : ""}
-                  </p>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
+        <OwnerOrdersList orders={rows} />
       </main>
     </>
   )

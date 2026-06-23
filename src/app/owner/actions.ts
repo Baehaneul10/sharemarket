@@ -92,6 +92,20 @@ export async function bulkPickupCompleteAction(formData: FormData) {
   revalidatePath("/owner")
 }
 
+// 여러 주문 일괄 취소
+export async function bulkCancelAction(formData: FormData) {
+  const ids = formData.getAll("order_ids").map(String).filter(Boolean)
+  if (ids.length === 0) { revalidatePath("/owner/orders"); return }
+  const { supabase } = await getUserId()
+  await supabase.from("orders")
+    .update({ status: "canceled", cancel_reason: "점주 취소" })
+    .in("id", ids)
+    .in("status", ["received", "incoming"])
+  revalidatePath("/owner/orders")
+  revalidatePath("/owner/pickup")
+  revalidatePath("/owner")
+}
+
 export async function ownerLogoutAction() {
   const supabase = await createClient()
   await supabase.auth.signOut()
