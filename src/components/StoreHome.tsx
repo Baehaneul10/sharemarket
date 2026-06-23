@@ -7,6 +7,7 @@ import { getCatalog } from "@/lib/queries"
 import { isClosed } from "@/lib/format"
 import { BRAND } from "@/lib/constants"
 import { StoreCookieSync } from "@/components/StoreCookieSync"
+import { SiteFooter } from "@/components/SiteFooter"
 import type { Store } from "@/types/db"
 
 // 특정 매장의 메인 카탈로그 화면 (홈 '/' 과 '/s/[slug]' 에서 공통 사용)
@@ -58,6 +59,8 @@ export async function StoreHome({ store, cat }: { store: Store; cat?: string }) 
         <p className="mt-1 mb-3 text-sm text-gray-500">픽업 일정과 신규 상품 소식을 받아보세요.</p>
         <OpenChatButton url={store.openchat_url} />
       </section>
+
+      <SiteFooter />
     </main>
   )
 }
