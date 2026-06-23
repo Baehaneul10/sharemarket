@@ -2,11 +2,11 @@
 export const COMPANY = {
   legalName: "주식회사 블루트렌드",
   serviceName: "영영상점",
-  ceo: "(대표자명)",              // TODO: 대표이사 이름
-  address: "(사업장 소재지)",       // TODO: 사업장 주소
-  bizNo: "(사업자등록번호)",        // TODO: 000-00-00000
-  mailOrderNo: "(통신판매업 신고번호)", // TODO
-  tel: "(대표 전화)",             // TODO
+  ceo: "조영훈",
+  address: "13646 경기도 성남시 수정구 위례광장로 19 (창곡동) 아이페리온 12층 1202호",
+  bizNo: "886-88-02905",
+  mailOrderNo: "2024-성남수정-0905",
+  tel: "010-5741-1685",
   email: "bt@bluetrend.co.kr",
   privacyOfficer: "경상주",
 } as const
