@@ -44,12 +44,12 @@ export async function pickupCompleteAction(formData: FormData) {
   revalidatePath("/owner")
 }
 
-// 취소 처리
+// 취소 처리 (재고 복구 포함 — owner_cancel_order RPC)
 export async function cancelOrderAction(formData: FormData) {
   const id = String(formData.get("order_id"))
   const reason = String(formData.get("cancel_reason") ?? "").trim() || null
   const { supabase } = await getUserId()
-  await supabase.from("orders").update({ status: "canceled", cancel_reason: reason }).eq("id", id)
+  await supabase.rpc("owner_cancel_order", { p_order_id: id, p_reason: reason })
   revalidatePath(`/owner/orders/${id}`)
   revalidatePath("/owner/orders")
   revalidatePath("/owner")
@@ -92,15 +92,14 @@ export async function bulkPickupCompleteAction(formData: FormData) {
   revalidatePath("/owner")
 }
 
-// 여러 주문 일괄 취소
+// 여러 주문 일괄 취소 (각각 재고 복구)
 export async function bulkCancelAction(formData: FormData) {
   const ids = formData.getAll("order_ids").map(String).filter(Boolean)
   if (ids.length === 0) { revalidatePath("/owner/orders"); return }
   const { supabase } = await getUserId()
-  await supabase.from("orders")
-    .update({ status: "canceled", cancel_reason: "점주 취소" })
-    .in("id", ids)
-    .in("status", ["received", "incoming"])
+  for (const id of ids) {
+    await supabase.rpc("owner_cancel_order", { p_order_id: id, p_reason: "점주 취소" })
+  }
   revalidatePath("/owner/orders")
   revalidatePath("/owner/pickup")
   revalidatePath("/owner")
